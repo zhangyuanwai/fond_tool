@@ -14,7 +14,8 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse, HTMLResponse
 
 from aktools.login.user_login import User, get_current_active_user
-from aktools.datasets import get_pyscript_html
+from aktools.datasets import get_pyscript_html, get_template_path
+from fastapi.templating import Jinja2Templates
 
 app_core = APIRouter()
 
@@ -96,9 +97,9 @@ def root(request: Request, item_id: str):
     :return: 指定 接口名称 和 参数 的数据
     :rtype: json
     """
-    interface_list = dir(ak)    
+    interface_list = dir(ak)
     decode_params = urllib.parse.unquote(str(request.query_params))
-    #print(decode_params)   
+    # print(decode_params)
     if item_id not in interface_list:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -106,13 +107,15 @@ def root(request: Request, item_id: str):
                 "error": "未找到该接口，请升级 AKShare 到最新版本并在文档中确认该接口的使用方式：https://www.akshare.xyz"
             },
         )
-    eval_str = decode_params.replace('&', ';')#还原;
-    #eval_str = eval_str.replace(' ', '')#去掉参数内的空格
-    #print(eval_str)    
-    eval_str = eval_str.replace("=", '="', 1) + '"'#给第一个等号加上"
-    #print(eval_str)    
-    eval_str = eval_str.replace("+", " ")  # 处理传递的参数中带空格的情况
-    #print(eval_str)    
+    if "cookie" in decode_params:
+        eval_str = decode_params.replace('&', ';')#还原;
+        eval_str = eval_str.split("=", maxsplit=1)[0] + "='" + eval_str.split("=", maxsplit=1)[1] + "'"
+        eval_str = eval_str.replace("+", " ")
+        #print(eval_str)
+        #print('***************************************************************************************')
+    else:
+        eval_str = decode_params.replace("&", '", ').replace("=", '="') + '"'
+        eval_str = eval_str.replace("+", " ")  # 处理传递的参数中带空格的情况
     if not bool(request.query_params):
         try:
             received_df = eval("ak." + item_id + f"()")
@@ -132,9 +135,7 @@ def root(request: Request, item_id: str):
         return JSONResponse(status_code=status.HTTP_200_OK, content=json.loads(temp_df))
     else:
         try:
-            cmd="ak." + item_id + f"({eval_str})"
-            #print(cmd)            
-            received_df = eval(cmd)
+            received_df = eval("ak." + item_id + f"({eval_str})")
             if received_df is None:
                 return JSONResponse(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -157,12 +158,27 @@ def generate_html_response():
         html_content = f.read()
     return HTMLResponse(content=html_content, status_code=200)
 
+
+short_path = get_template_path()
+templates = Jinja2Templates(directory=short_path)
+
+
 @app_core.get(
     "/show-temp/{interface}",
     response_class=HTMLResponse,
     description="展示 PyScript",
     summary="该接口主要展示 PyScript 游览器运行 Python 代码",
 )
+def akscript_temp(request: Request, interface: str):
+    return templates.TemplateResponse(
+        "akscript.html",
+        context={
+            "request": request,
+            "ip": request.headers["host"],
+            "interface": interface,
+        },
+    )
+
 
 @app_core.get(
     "/show",
