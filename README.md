@@ -18,7 +18,8 @@ pip install aktools --upgrade
 #akshare和aktools安装完毕后，需要启动本地http服务，在cmd执行如下命令启动，使用本工具期间cmd窗口不可关闭  
 python -m aktools  
 
-#如果aktools存在问题，代表该工具存在bug作者暂时未修复，我手动修复了一下，如果报错的话，就将resources目录里的api.py替换掉aktools/core/api.py    
+#如果aktools存在问题，代表该工具存在bug作者暂时未修复，我手动修复了一下，如果报错的话，就将resources目录里的api.py替换掉aktools/core/api.py 
+
+#集思录数据需要cookie才能返回完整数据，请按照工具目录下的文档提示设置cookie       
 
 #至此，环境配置完毕，可以打开StockBondFund.exe进行使用了    
-
